@@ -1,32 +1,40 @@
-O sistema é composto por dois serviços principais:
-- **Backend (Flask):** API REST responsável pela autenticação de usuários,
-  gerenciamento de decks e cards, e integração com a API de tradução.
-- **MyMemory API:** Serviço externo gratuito de tradução automática,
-  consumido pelo backend a cada novo card criado.
+## Flashcards Idiomas
+
+Sistema de flashcards para aprendizado de idiomas com tradução automática e suporte a teclado coreano (Hangul).
+
+O sistema integra três serviços distintos:
+- **Backend (Flask):** API REST própria com autenticação JWT, gerenciamento de decks e cards.
+- **MyMemory API:** Serviço externo de tradução automática — consumido a cada novo card criado.
+- **Google Input Tools API:** Serviço externo do Google IME — converte romanização latina em caracteres Hangul em tempo real.
+- **Frontend (React/Vite):** Interface web para criar, revisar e gerenciar flashcards, e acessar a ferramenta de conversão Hangul.
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## Tecnologias Utilizadas
 
 ### Backend
 - Python 3.11
 - Flask — framework web
 - Flask-JWT-Extended — autenticação com tokens JWT
-- SQLite — banco de dados
-- Requests — consumo da API externa
+- Flask-SQLAlchemy + SQLite — banco de dados
+- Flask-CORS — suporte a requisições cross-origin
+- Requests — consumo de APIs externas
+- Gunicorn — servidor WSGI para produção
 
 ### Frontend
-- React
+- React 18
+- Vite — bundler e dev server
+- React Router v6 — navegação SPA
 - Axios — requisições HTTP
 
 ### Infraestrutura
-- GitHub — versionamento e colaboração
+- GitHub — versionamento
 - Render.com — deploy do backend
 - Vercel — deploy do frontend
 
 ---
 
-## 🔗 Endpoints da API
+## Endpoints da API
 
 ### Autenticação
 | Método | Rota | Descrição |
@@ -48,25 +56,38 @@ O sistema é composto por dois serviços principais:
 | POST | `/decks/<id>/cards` | Criar card com tradução automática |
 | DELETE | `/cards/<id>` | Deletar card |
 
-### Integração
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| POST | `/translate` | Traduz texto via MyMemory API |
+### Integração / Tradução
+| Método | Rota | Proteção | Descrição |
+|--------|------|----------|-----------|
+| POST | `/translate` | JWT | Traduz texto via MyMemory API |
+| POST | `/translate/hangul` | JWT | Converte teclado latino → caracteres Hangul |
+
+#### Exemplo `/translate/hangul`
+```json
+// Request
+{ "text": "annyeong" }
+
+// Response
+{ "original": "annyeong", "hangul": "안녕" }
+```
+
+O endpoint delega a conversão à **Google Input Tools API** (`inputtools.google.com`), que interpreta a romanização fonética e retorna os caracteres Hangul compostos. Possui fallback local caso a API externa esteja indisponível.
 
 ---
 
-## 🔄 Fluxo de Integração
+## Fluxo de Integração
 
-1. Usuário faz login → recebe token JWT
-2. Usuário cria um card com uma palavra
-3. Backend chama a MyMemory API com a palavra
-4. MyMemory retorna a tradução
-5. Backend salva o card (palavra + tradução) no banco
-6. Frontend exibe o flashcard pronto
+1. Usuário faz registro/login → recebe token JWT
+2. Usuário cria um deck com o idioma destino (ex.: coreano)
+3. Usuário cria um card com uma palavra em português
+4. Backend chama a MyMemory API para obter a tradução
+5. Card é salvo (palavra + tradução) no banco SQLite
+6. Frontend exibe o flashcard (clique para revelar a tradução)
+7. Opcionalmente: usuário usa a ferramenta Hangul para converter texto digitado no teclado latino em caracteres coreanos
 
 ---
 
-## ▶️ Como Executar Localmente
+## Como Executar Localmente
 
 ### Backend
 ```bash
@@ -75,28 +96,42 @@ python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python run.py
+# API disponível em http://localhost:5000
 ```
 
 ### Frontend
 ```bash
 cd frontend
+cp .env.example .env       # ajuste VITE_API_URL se necessário
 npm install
 npm run dev
+# App disponível em http://localhost:5173
 ```
 
 ---
 
-## 🌐 Deploy
+## Deploy
 
+### Backend — Render.com
+1. Conecte o repositório no [Render.com](https://render.com)
+2. Selecione o diretório raiz como `backend/`
+3. O `render.yaml` já configura build e start commands
+4. Adicione a variável de ambiente `JWT_SECRET_KEY` (ou deixe o Render gerar automaticamente)
+
+### Frontend — Vercel
+1. Conecte o repositório no [Vercel](https://vercel.com)
+2. Selecione o diretório raiz como `frontend/`
+3. Defina a variável de ambiente `VITE_API_URL` com a URL do backend no Render
+4. O `vercel.json` já configura o rewrite para SPA
+
+**Links de produção:**
 - Backend: `https://flashcard-idiomas.onrender.com`
 - Frontend: `https://flashcard-idiomas.vercel.app`
 
-> Links serão atualizados após o deploy final.
-
 ---
 
-## 👤 Autor
+## Autor
 
 **Davi Alencar Almeida**  
 Análise e Desenvolvimento de Sistemas — UNIFOR  
-(https://github.com/Dragoneto)
+[github.com/Dragoneto](https://github.com/Dragoneto)
