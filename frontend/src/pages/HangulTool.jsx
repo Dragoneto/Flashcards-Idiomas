@@ -1,83 +1,90 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axios";
+import { Flag, IconArrowLeft } from "../components/Icons";
 
 const EXAMPLES = [
-  { latin: "annyeong", hangul: "안녕" },
-  { latin: "hanguk", hangul: "한국" },
-  { latin: "saranghae", hangul: "사랑해" },
+  { latin: "annyeong",     hangul: "안녕" },
+  { latin: "hanguk",       hangul: "한국" },
+  { latin: "saranghae",    hangul: "사랑해" },
   { latin: "gamsahamnida", hangul: "감사합니다" },
 ];
 
 export default function HangulTool() {
-  const [input, setInput] = useState("");
-  const [result, setResult] = useState(null);
+  const [input, setInput]     = useState("");
+  const [result, setResult]   = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
 
   const convert = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
+    setResult(null);
     try {
-      const { data } = await api.post("/translate/hangul", { text: input });
+      const { data } = await api.post("/translate/hangul", { text: input.trim() });
       setResult(data);
     } catch {
-      setResult({ error: "Erro ao converter. Tente novamente." });
+      setError("Não foi possível converter. Verifique sua conexão.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: 520, margin: "40px auto", padding: "0 16px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-        <Link to="/"><button className="btn-secondary">← Voltar</button></Link>
-        <h1>🇰🇷 Romanização → Hangul</h1>
+    <div className="page">
+
+      <div style={{ textAlign: "center", marginBottom: 24, width: "100%" }}>
+        <Link to="/">
+          <button className="btn-secondary btn-sm"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
+            <IconArrowLeft size={14} color="var(--purple)" /> Voltar
+          </button>
+        </Link>
+        <Flag code="kr" height={42} />
+        <h1 style={{ fontSize: "1.6rem", marginTop: 10 }}>Romanização para Hangul</h1>
+        <p style={{ color: "var(--muted)", fontWeight: 600, fontSize: "0.88rem", marginTop: 4 }}>
+          Digite a pronúncia e veja em coreano
+        </p>
       </div>
 
-      <div className="card" style={{ marginBottom: 16 }}>
-        <p style={{ fontSize: "0.88rem", color: "#555", marginBottom: 14 }}>
-          Digite a pronúncia em letras latinas e converta para Hangul via{" "}
-          <strong>Google Input Tools</strong>.
-        </p>
-        <form onSubmit={convert} style={{ display: "flex", gap: 8 }}>
-          <input
-            placeholder="Ex: annyeong"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            required
-            style={{ flex: 1 }}
-          />
+      <div className="card" style={{ marginBottom: 20 }}>
+        <form onSubmit={convert} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <input placeholder="Ex: annyeong" value={input}
+            onChange={(e) => setInput(e.target.value)} required />
           <button className="btn-primary" type="submit" disabled={loading}>
-            {loading ? "..." : "Converter"}
+            {loading ? <span className="spinner" /> : "Converter"}
           </button>
         </form>
       </div>
 
+      {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
+
       {result && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          {result.error ? (
-            <p style={{ color: "red" }}>{result.error}</p>
-          ) : (
-            <>
-              <p style={{ fontSize: "0.82rem", color: "#888" }}>Romanização:</p>
-              <p style={{ fontFamily: "monospace", marginBottom: 10 }}>{result.original}</p>
-              <p style={{ fontSize: "0.82rem", color: "#888" }}>Hangul (Google Input Tools):</p>
-              <p style={{ fontSize: "2.2rem", color: "#4f46e5", lineHeight: 1.2 }}>{result.hangul}</p>
-            </>
-          )}
+        <div className="card" style={{ marginBottom: 20, background: "var(--purple-l)" }}>
+          <p style={{ color: "var(--purple)", fontSize: "0.85rem", fontWeight: 700, marginBottom: 8 }}>
+            Você digitou: <strong>{result.original}</strong>
+          </p>
+          <p style={{ fontSize: "4rem", fontWeight: 900, color: "var(--purple)", lineHeight: 1.1 }}>
+            {result.hangul}
+          </p>
+          <p style={{ color: "var(--muted)", fontSize: "0.76rem", fontWeight: 600, marginTop: 10 }}>
+            via Google Input Tools
+          </p>
         </div>
       )}
 
-      <div className="card" style={{ fontSize: "0.84rem", color: "#555" }}>
-        <strong>Exemplos:</strong>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+      <div className="card">
+        <p style={{ fontWeight: 800, marginBottom: 14 }}>Exemplos — clique para testar:</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {EXAMPLES.map(({ latin, hangul }) => (
-            <div key={latin} style={{ display: "flex", justifyContent: "space-between",
-              background: "#f9f9f9", borderRadius: 6, padding: "6px 10px", cursor: "pointer" }}
+            <button key={latin} className="btn-secondary"
+              style={{ display: "flex", justifyContent: "space-between",
+                alignItems: "center", borderRadius: 12, padding: "10px 18px" }}
               onClick={() => setInput(latin)}>
-              <code>{latin}</code>
-              <span style={{ color: "#4f46e5", fontSize: "1rem" }}>{hangul}</span>
-            </div>
+              <code style={{ fontWeight: 800, color: "var(--purple)" }}>{latin}</code>
+              <span style={{ fontSize: "1.4rem" }}>{hangul}</span>
+            </button>
           ))}
         </div>
       </div>
