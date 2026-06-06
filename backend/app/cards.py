@@ -8,14 +8,64 @@ cards_bp = Blueprint("cards", __name__)
 
 MYMEMORY_URL = "https://api.mymemory.translated.net/get"
 
+# Unicode ranges for script validation
+_HANGUL   = lambda ch: "가" <= ch <= "힣"
+_HIRAGANA = lambda ch: "぀" <= ch <= "ゟ"
+_KATAKANA = lambda ch: "゠" <= ch <= "ヿ"
+_KANJI    = lambda ch: "一" <= ch <= "鿿"
+_JAPANESE = lambda ch: _HIRAGANA(ch) or _KATAKANA(ch) or _KANJI(ch)
+
 
 def translate_text(text: str, lang_pair: str) -> str:
+    """Translate via MyMemory with script validation for CJK languages."""
+    parts = lang_pair.split("|")
+    if len(parts) != 2:
+        return text
+    target_lang = parts[1]
+
     try:
-        resp = http.get(MYMEMORY_URL, params={"q": text, "langpair": lang_pair}, timeout=5)
-        data = resp.json()
-        return data["responseData"]["translatedText"]
+        resp = http.get(MYMEMORY_URL, params={"q": text, "langpair": lang_pair}, timeout=6)
+        result = resp.json()["responseData"]["translatedText"]
+
+        # Discard if same as input
+        if result.strip().lower() == text.strip().lower():
+            return text
+
+        # Validate script for Korean
+        if target_lang == "ko" and not any(_HANGUL(ch) for ch in result):
+            return text
+
+        # Validate script for Japanese
+        if target_lang == "ja" and not any(_JAPANESE(ch) for ch in result):
+            return text
+
+        return result
     except Exception:
         return text
+
+
+def romanize(text: str, language: str) -> str | None:
+    if language != "ko":
+        return None
+    try:
+        from hangul_romanize import Transliter
+        from hangul_romanize import rule
+        return Transliter(rule.academic).translit(text)
+    except Exception:
+        return None
+
+
+def make_syllable_guide(text: str, language: str) -> str | None:
+    if language != "ko":
+        return None
+    try:
+        from hangul_romanize import Transliter
+        from hangul_romanize import rule
+        t = Transliter(rule.academic)
+        parts = [t.translit(ch).upper() for ch in text if "가" <= ch <= "힣"]
+        return " - ".join(parts) if parts else None
+    except Exception:
+        return None
 
 
 @cards_bp.route("/decks/<int:deck_id>/cards", methods=["GET"])
@@ -40,9 +90,12 @@ def create_card(deck_id):
         return jsonify({"error": "Frente do card é obrigatória"}), 400
 
     lang_pair = f"{source_lang}|{deck.language}"
-    back = translate_text(front, lang_pair)
+    back      = translate_text(front, lang_pair)
+    roman     = romanize(back, deck.language)
+    syllables = make_syllable_guide(back, deck.language)
 
-    card = Card(front=front, back=back, deck_id=deck.id)
+    card = Card(front=front, back=back, romanization=roman,
+                syllable_guide=syllables, deck_id=deck.id)
     db.session.add(card)
     db.session.commit()
     return jsonify(card.to_dict()), 201

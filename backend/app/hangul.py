@@ -15,7 +15,9 @@ import requests
 GOOGLE_INPUT_TOOLS_URL = "https://inputtools.google.com/request"
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Referer": "https://www.google.com/",
+    "Origin": "https://www.google.com",
     "Accept": "application/json",
 }
 

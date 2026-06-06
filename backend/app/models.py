@@ -35,13 +35,17 @@ class Card(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     front = db.Column(db.String(500), nullable=False)
     back = db.Column(db.String(500), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    deck_id = db.Column(db.Integer, db.ForeignKey("deck.id"), nullable=False)
+    romanization   = db.Column(db.String(500), nullable=True)
+    syllable_guide = db.Column(db.String(500), nullable=True)
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+    deck_id        = db.Column(db.Integer, db.ForeignKey("deck.id"), nullable=False)
 
     def to_dict(self):
         return {
             "id": self.id,
             "front": self.front,
             "back": self.back,
+            "romanization": self.romanization,
+            "syllable_guide": self.syllable_guide,
             "created_at": self.created_at.isoformat(),
         }
